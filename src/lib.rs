@@ -1,17 +1,29 @@
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    sync::Arc,
+};
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, reflect::FromReflect, utils::HashMap};
 
 pub struct SimpleStateMachinePlugin {}
 
 impl Plugin for SimpleStateMachinePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<StateMachineEvent>()
-            .add_system(Self::check_transitions);
+            .register_type::<AnimationStateMachine>()
+            .register_type::<AnimationStateRef>()
+            .add_system(Self::check_transitions.label(StateMachineSystemLabel::StateMachineLabel))
+            .add_system(
+                Self::init_state_machines.label(StateMachineSystemLabel::StateMachineLabel),
+            );
     }
 }
 
 impl SimpleStateMachinePlugin {
+    pub fn new() -> Self {
+        Self {}
+    }
+
     fn check_transitions(
         mut state_machines_query: Query<(Entity, &mut AnimationStateMachine, &mut AnimationPlayer)>,
         animations: Res<Assets<AnimationClip>>,
@@ -23,16 +35,36 @@ impl SimpleStateMachinePlugin {
                 &mut player,
                 animations.as_ref(),
                 &mut event_writer,
-            )
+            );
+        }
+    }
+
+    fn init_state_machines(
+        mut state_machines_query: Query<
+            (&AnimationStateMachine, &mut AnimationPlayer),
+            Added<AnimationStateMachine>,
+        >,
+    ) {
+        for (state_machine, mut player) in &mut state_machines_query {
+            state_machine.init(&mut player);
         }
     }
 }
 
-#[derive(Component, Default)]
+#[derive(SystemLabel, Clone)]
+pub enum StateMachineSystemLabel {
+    StateMachineLabel,
+}
+
+pub type StateMachineVariables = HashMap<String, bool>;
+
+#[derive(Component, Default, Reflect, FromReflect)]
+#[reflect(Component)]
 pub struct AnimationStateMachine {
-    current_state: String,
-    states: HashMap<String, AnimationState>,
-    transitions: Vec<StateMachineTransition>,
+    pub current_state: String,
+    pub states: HashMap<String, AnimationState>,
+    pub transitions: Vec<StateMachineTransition>,
+    pub variables: StateMachineVariables,
 }
 
 impl AnimationStateMachine {
@@ -72,8 +104,9 @@ impl AnimationStateMachine {
                 || Self::animation_finished(player, &current_state, animations)
             {
                 for transition in self.transitions_from_current_state() {
-                    if transition.trigger.as_ref()() {
+                    if transition.trigger.evaluate(&self.variables) {
                         if let Some(next_state) = self.get_state(transition.end_state.unwrap()) {
+                            debug!("triggering {}", transition);
                             self.current_state = next_state.name;
                             player.play(next_state.clip);
                             event_writer.send(StateMachineEvent {
@@ -98,9 +131,19 @@ impl AnimationStateMachine {
             None => true,
         }
     }
+
+    pub fn update_variable<T: ToString>(&mut self, name: T, value: bool) {
+        self.variables.insert(name.to_string(), value);
+    }
+
+    fn init(&self, player: &mut AnimationPlayer) {
+        if let Some(current_state) = self.current_state() {
+            player.play(current_state.clip);
+        }
+    }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Reflect, FromReflect)]
 pub struct AnimationState {
     pub clip: Handle<AnimationClip>,
     pub name: String,
@@ -113,13 +156,17 @@ impl AnimationState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Reflect, FromReflect)]
 pub enum AnimationStateRef {
     AnyState,
     StateName(String),
 }
 
 impl AnimationStateRef {
+    pub fn from_string<T: ToString>(name: T) -> Self {
+        Self::StateName(name.to_string())
+    }
+
     #[inline]
     pub fn unwrap(&self) -> &String {
         match self {
@@ -138,46 +185,47 @@ impl Display for AnimationStateRef {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Reflect, FromReflect)]
 pub struct StateMachineTransition {
     pub start_state: AnimationStateRef,
     pub end_state: AnimationStateRef,
-    pub trigger: Box<dyn StateMachineTrigger>,
+    #[reflect(ignore)]
+    pub trigger: StateMachineTrigger,
 }
 
-impl Debug for StateMachineTransition {
+impl Display for StateMachineTransition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "StateMachineTransition({} -> {}): {}",
-            self.start_state,
-            self.end_state,
-            self.trigger.as_ref()()
+            "StateMachineTransition({} -> {})",
+            self.start_state, self.end_state,
         )
     }
 }
 
-pub trait StateMachineTrigger: Fn() -> bool + Send + Sync + ClonedStateMachineTrigger {}
-
-pub trait ClonedStateMachineTrigger {
-    fn clone_box(&self) -> Box<dyn StateMachineTrigger>;
+#[derive(Default, Clone)]
+pub enum StateMachineTrigger {
+    #[default]
+    Never,
+    Always,
+    Condition(Arc<dyn Fn(&StateMachineVariables) -> bool + Send + Sync>),
 }
 
-impl<T> ClonedStateMachineTrigger for T
-where
-    T: 'static + StateMachineTrigger + Clone,
-{
-    fn clone_box(&self) -> Box<dyn StateMachineTrigger> {
-        Box::new(self.clone())
+impl StateMachineTrigger {
+    pub fn from(f: impl Fn(&StateMachineVariables) -> bool + Send + Sync + 'static) -> Self {
+        Self::Condition(Arc::new(f))
+    }
+
+    fn evaluate(&self, variables: &StateMachineVariables) -> bool {
+        match self {
+            Self::Never => false,
+            Self::Always => true,
+            Self::Condition(f) => (f)(variables),
+        }
     }
 }
 
-impl Clone for Box<dyn StateMachineTrigger> {
-    fn clone(&self) -> Self {
-        self.clone_box()
-    }
-}
-
+#[derive(Debug)]
 pub struct StateMachineEvent {
     pub entity: Entity,
     pub origin: AnimationStateRef,
