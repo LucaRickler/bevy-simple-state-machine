@@ -1,0 +1,10 @@
+[package]
+name = "bevy-simple-state-machine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Luca Rickler <luca.rickler@gmail.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = "0.8.0"
