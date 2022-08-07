@@ -1,5 +1,70 @@
 #![warn(missing_docs)]
-//! TODO
+//! # Bevy Simple State Machine
+//!
+//! Plugin for the [Bevy Engine](https://bevyengine.org) which implements 
+//! a rudimentary animation state machine system.
+//!
+//! To use this, you have to add the `SimpleStateMachinePlugin` to you app
+//!
+//! ```
+//! # use bevy::prelude::*;
+//! # use bevy_simple_state_machine::SimpleStateMachinePlugin;
+//! App::new()
+//!     .add_plugins(DefaultPlugins)
+//!     .add_plugin(SimpleStateMachinePlugin::new());
+//! ```
+//!
+//! And then insert an `AnimationStateMachine` component on your entities
+//!
+//! ```
+//! # use bevy_simple_state_machine::*;
+//! # use bevy::{prelude::*, utils::HashMap};
+//! fn setup(mut commands: Commands) {
+//! # let idle_clip_handle: Handle<AnimationClip> = Handle::default();
+//! # let run_clip_handle: Handle<AnimationClip> = Handle::default();
+//!     let starting_state = "idle";
+//!     let my_states_map = HashMap::from([
+//!         ("idle".to_string(), AnimationState{
+//!             name: "idle".to_string(),
+//!             clip: idle_clip_handle,
+//!             interruptible: true,
+//!         }),
+//!         ("run".to_string(), AnimationState{
+//!             name: "run".to_string(),
+//!             clip: run_clip_handle,
+//!             interruptible: true,
+//!         }),
+//!     ]);
+//!     let my_states_transitions_vec = vec![
+//!         StateMachineTransition {
+//!         start_state: AnimationStateRef::from_string("idle"),
+//!         end_state: AnimationStateRef::from_string("run"),
+//!         trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+//!     }];
+//!     let state_machine_vars = HashMap::from([
+//!         ("run".to_string(), StateMachineVariableType::Bool(false)),    
+//!     ]);
+//!      
+//!     commands.spawn_bundle(SpatialBundle::default())
+//!         .insert(AnimationPlayer::default())
+//!         .insert(AnimationStateMachine::new(
+//!             starting_state,
+//!             my_states_map,
+//!             my_states_transitions_vec,
+//!             state_machine_vars,
+//!         ));
+//! }
+//! ```
+//! 
+//! ## Currently supported features:
+//! 
+//!  - Custom transition conditions
+//!  - Transitions from wildcard state AnyState
+//!  - Events emitted on transition end
+//! 
+//! Currently, transitions end on the same frame they are triggered.
+//! 
+//! Animation blending and transition duration are not implemented.
 
 use std::{
     fmt::{Debug, Display},
@@ -8,7 +73,8 @@ use std::{
 
 use bevy::{prelude::*, reflect::FromReflect, utils::HashMap};
 
-/// TOD
+/// TODO
+#[derive(Default)]
 pub struct SimpleStateMachinePlugin {}
 
 impl Plugin for SimpleStateMachinePlugin {
@@ -26,7 +92,7 @@ impl Plugin for SimpleStateMachinePlugin {
 impl SimpleStateMachinePlugin {
     /// Creates a new instance of [`SimpleStateMachinePlugin`]    
     pub fn new() -> Self {
-        Self {}
+        Self::default()
     }
 
     fn check_transitions(
@@ -129,7 +195,51 @@ impl StateMachineVariableType {
 
 /// Main state machine component
 ///
-/// TODO
+/// Insert this on the entity you want to control with the state machine.
+/// 
+/// ##Note
+/// To function, the plugin requires an [`AnimationPlayer`] on the same entity.
+/// 
+/// Example
+/// ```
+/// # use bevy_simple_state_machine::*;
+/// # use bevy::{prelude::*, utils::HashMap};
+/// fn setup(mut commands: Commands) {
+/// # let idle_clip_handle: Handle<AnimationClip> = Handle::default();
+/// # let run_clip_handle: Handle<AnimationClip> = Handle::default();
+///     let starting_state = "idle";
+///     let my_states_map = HashMap::from([
+///         ("idle".to_string(), AnimationState{
+///             name: "idle".to_string(),
+///             clip: idle_clip_handle,
+///             interruptible: true,
+///         }),
+///         ("run".to_string(), AnimationState{
+///             name: "run".to_string(),
+///             clip: run_clip_handle,
+///             interruptible: true,
+///         }),
+///     ]);
+///     let my_states_transitions_vec = vec![
+///         StateMachineTransition {
+///         start_state: AnimationStateRef::from_string("idle"),
+///         end_state: AnimationStateRef::from_string("run"),
+///         trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+///     }];
+///     let state_machine_vars = HashMap::from([
+///         ("run".to_string(), StateMachineVariableType::Bool(false)),    
+///     ]);
+///      
+///     commands.spawn_bundle(SpatialBundle::default())
+///         .insert(AnimationPlayer::default())
+///         .insert(AnimationStateMachine::new(
+///             starting_state,
+///             my_states_map,
+///             my_states_transitions_vec,
+///             state_machine_vars,
+///         ));
+/// }
+/// ```
 #[derive(Component, Default, Reflect, FromReflect)]
 #[reflect(Component)]
 pub struct AnimationStateMachine {
@@ -141,14 +251,14 @@ pub struct AnimationStateMachine {
 
 impl AnimationStateMachine {
     /// Creates a new [`AnimationStateMachine`]
-    pub fn new(
-        current_state: String,
+    pub fn new<T: ToString>(
+        current_state: T,
         states: HashMap<String, AnimationState>,
         transitions: Vec<StateMachineTransition>,
         variables: StateMachineVariables,
     ) -> Self {
         Self {
-            current_state,
+            current_state: current_state.to_string(),
             states,
             transitions,
             variables,
@@ -226,7 +336,7 @@ pub enum AnimationStateRef {
 }
 
 impl AnimationStateRef {
-    /// Creates a state ref from a `impl ToString` value
+    /// Creates a [`AnimationStateRef`] from a `impl ToString` value
     pub fn from_string<T: ToString>(name: T) -> Self {
         Self::StateName(name.to_string())
     }
@@ -255,6 +365,17 @@ impl Display for AnimationStateRef {
 }
 
 /// Transition from [`AnimationState`] A to [`AnimationState`] B
+///
+/// Example
+/// ```
+/// # use bevy_simple_state_machine::{StateMachineTransition, StateMachineTrigger, AnimationStateRef};
+///
+/// let transition = StateMachineTransition {
+///     start_state: AnimationStateRef::from_string("idle"),
+///     end_state: AnimationStateRef::from_string("run"),
+///     trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+/// };
+/// ```
 #[derive(Clone, Reflect, FromReflect)]
 pub struct StateMachineTransition {
     /// Reference to the starting state
@@ -286,9 +407,9 @@ impl Display for StateMachineTransition {
 ///  - Always: the transition is always executed. This happens on the next frame or once the previous animation has concluded
 ///  - Condition: supports a custom condition of type `Fn(&StateMachineVariables) -> bool + Send + Sync`
 ///
-/// ##Example
+/// Example
 /// ```
-/// use bevy_simple_state_machine::StateMachineTrigger;
+/// # use bevy_simple_state_machine::StateMachineTrigger;
 ///
 /// // this trigger returns true if the state machine variable "run" is set to true
 /// let trigger = StateMachineTrigger::from(|vars| vars["run"].is_bool(true));
@@ -307,9 +428,9 @@ pub enum StateMachineTrigger {
 impl StateMachineTrigger {
     /// Creates a new [`StateMachineTrigger::Condition`] from the given function
     ///
-    /// ## Example
+    /// Example
     /// ```
-    /// use bevy_simple_state_machine::StateMachineTrigger;
+    /// # use bevy_simple_state_machine::StateMachineTrigger;
     ///
     /// // this trigger returns true if the state machine variable "run" is set to true
     /// let trigger = StateMachineTrigger::from(|vars| vars["run"].is_bool(true));
