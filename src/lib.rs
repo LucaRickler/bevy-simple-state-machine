@@ -73,7 +73,16 @@ use std::{
 
 use bevy::{prelude::*, reflect::FromReflect, utils::HashMap};
 
-/// TODO
+/// Plugin that handles all state machine executions
+/// 
+/// Include this in your app to enable this crate
+/// ```
+/// # use bevy::prelude::*;
+/// # use bevy_simple_state_machine::SimpleStateMachinePlugin;
+/// App::new()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugin(SimpleStateMachinePlugin::new());
+/// ```
 #[derive(Default)]
 pub struct SimpleStateMachinePlugin {}
 
@@ -167,7 +176,7 @@ pub enum StateMachineVariableType {
     I32(i32),
     /// Stores an u32
     U32(u32),
-    /// Stores a string
+    /// Stores a String
     String(String),
 }
 
@@ -198,7 +207,7 @@ impl StateMachineVariableType {
 /// Insert this on the entity you want to control with the state machine.
 /// 
 /// ##Note
-/// To function, the plugin requires an [`AnimationPlayer`] on the same entity.
+/// To function, the component requires an [`AnimationPlayer`] on the same entity.
 /// 
 /// Example
 /// ```
@@ -368,8 +377,7 @@ impl Display for AnimationStateRef {
 ///
 /// Example
 /// ```
-/// # use bevy_simple_state_machine::{StateMachineTransition, StateMachineTrigger, AnimationStateRef};
-///
+/// # use bevy_simple_state_machine::{StateMachineTransition, StateMachineTrigger, AnimationStateRef};///
 /// let transition = StateMachineTransition {
 ///     start_state: AnimationStateRef::from_string("idle"),
 ///     end_state: AnimationStateRef::from_string("run"),
@@ -382,7 +390,7 @@ pub struct StateMachineTransition {
     pub start_state: AnimationStateRef,
     /// Reference to the end state
     ///
-    /// #Note
+    /// ## Note
     /// Do not set this to [`AnimationStateRef::AnyState`], or it may panic
     pub end_state: AnimationStateRef,
     /// Transition trigger condition
@@ -410,7 +418,6 @@ impl Display for StateMachineTransition {
 /// Example
 /// ```
 /// # use bevy_simple_state_machine::StateMachineTrigger;
-///
 /// // this trigger returns true if the state machine variable "run" is set to true
 /// let trigger = StateMachineTrigger::from(|vars| vars["run"].is_bool(true));
 /// ```
@@ -431,7 +438,6 @@ impl StateMachineTrigger {
     /// Example
     /// ```
     /// # use bevy_simple_state_machine::StateMachineTrigger;
-    ///
     /// // this trigger returns true if the state machine variable "run" is set to true
     /// let trigger = StateMachineTrigger::from(|vars| vars["run"].is_bool(true));
     /// ```
