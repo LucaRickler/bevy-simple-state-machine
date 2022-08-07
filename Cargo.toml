@@ -2,7 +2,13 @@
 name = "bevy-simple-state-machine"
 version = "0.1.0"
 edition = "2021"
+description = "A rudimentary animation state machine system for Bevy"
+repository = "https://github.com/LucaRickler/bevy-simple-state-machine"
 authors = ["Luca Rickler <luca.rickler@gmail.com>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+keywords = ["gamedev", "bevy", "animation"]
+categories = ["game-development"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
