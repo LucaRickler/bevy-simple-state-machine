@@ -56,7 +56,35 @@ pub enum StateMachineSystemLabel {
     StateMachineLabel,
 }
 
-pub type StateMachineVariables = HashMap<String, bool>;
+pub type StateMachineVariables = HashMap<String, StateMachineVariableType>;
+
+#[derive(Clone, Reflect, FromReflect, PartialEq)]
+pub enum StateMachineVariableType {
+    Bool(bool),
+    F32(f32),
+    I32(i32),
+    U32(u32),
+    String(String),
+}
+
+
+impl StateMachineVariableType {
+    pub fn is_bool(&self, value: bool) -> bool {
+        *self == Self::Bool(value)
+    }
+
+    pub fn is_i32(&self, value: i32) -> bool {
+        *self == Self::I32(value)
+    }
+
+    pub fn is_u32(&self, value: u32) -> bool {
+        *self == Self::U32(value)
+    }
+
+    pub fn is_f32(&self, value: f32) -> bool {
+        *self == Self::F32(value)
+    }
+}
 
 #[derive(Component, Default, Reflect, FromReflect)]
 #[reflect(Component)]
@@ -132,7 +160,7 @@ impl AnimationStateMachine {
         }
     }
 
-    pub fn update_variable<T: ToString>(&mut self, name: T, value: bool) {
+    pub fn update_variable<T: ToString>(&mut self, name: T, value: StateMachineVariableType) {
         self.variables.insert(name.to_string(), value);
     }
 
