@@ -53,15 +53,21 @@ fn setup(mut commands: Commands) {
 }
 ```
 
----
+And then you can control it changing the values of the state machine variables
+ 
+```rust
+state_machine.update_variable("run", StateMachineVariableType::Bool(true));
+```
 
 ## Currently supported features:
 
  - Custom transition conditions
  - Transitions from wildcard state AnyState
  - Events emitted on transition end
+ - Internal state machine variables
 
 Currently, transitions end on the same frame they are triggered.
+
 
 Animation blending and transition duration are not implemented.
 

@@ -1,7 +1,7 @@
 #![warn(missing_docs)]
 //! # Bevy Simple State Machine
 //!
-//! Plugin for the [Bevy Engine](https://bevyengine.org) which implements 
+//! Plugin for the [Bevy Engine](https://bevyengine.org) which implements
 //! a rudimentary animation state machine system.
 //!
 //! To use this, you have to add the `SimpleStateMachinePlugin` to you app
@@ -55,15 +55,31 @@
 //!         ));
 //! }
 //! ```
-//! 
+//!
+//! And then you can control it changing the values of the state
+//! machine variables
+//!
+//! ```
+//! # use bevy_simple_state_machine::*;
+//! # use bevy::{prelude::*, utils::HashMap};
+//! # let mut state_machine = AnimationStateMachine::new(
+//! #   "idle",
+//! #   HashMap::default(),
+//! #   vec![],
+//! #   HashMap::from([("run".to_string(), StateMachineVariableType::Bool(false))]),
+//! # );
+//! state_machine.update_variable("run", StateMachineVariableType::Bool(true));
+//! ```
+//!
 //! ## Currently supported features:
-//! 
+//!
 //!  - Custom transition conditions
 //!  - Transitions from wildcard state AnyState
 //!  - Events emitted on transition end
-//! 
+//!  - Internal state machine variables
+//!
 //! Currently, transitions end on the same frame they are triggered.
-//! 
+//!
 //! Animation blending and transition duration are not implemented.
 
 use std::{
@@ -74,7 +90,7 @@ use std::{
 use bevy::{prelude::*, reflect::FromReflect, utils::HashMap};
 
 /// Plugin that handles all state machine executions
-/// 
+///
 /// Include this in your app to enable this crate
 /// ```
 /// # use bevy::prelude::*;
@@ -205,10 +221,12 @@ impl StateMachineVariableType {
 /// Main state machine component
 ///
 /// Insert this on the entity you want to control with the state machine.
-/// 
-/// ##Note
+///
+/// ## Note:
 /// To function, the component requires an [`AnimationPlayer`] on the same entity.
-/// 
+///
+/// ---
+///
 /// Example
 /// ```
 /// # use bevy_simple_state_machine::*;
@@ -236,7 +254,7 @@ impl StateMachineVariableType {
 ///         trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
 ///     }];
 ///     let state_machine_vars = HashMap::from([
-///         ("run".to_string(), StateMachineVariableType::Bool(false)),    
+///         ("run".to_string(), StateMachineVariableType::Bool(false)),
 ///     ]);
 ///      
 ///     commands.spawn_bundle(SpatialBundle::default())
@@ -325,7 +343,7 @@ pub struct AnimationState {
     pub clip: Handle<AnimationClip>,
     /// State name
     pub name: String,
-    /// If set to `true`, the animation will be interrupted once any valid transition is triggered
+    /// If set to `true`, the animation will only be interrupted once any valid transition is triggered
     pub interruptible: bool,
 }
 
