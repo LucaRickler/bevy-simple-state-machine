@@ -24,12 +24,12 @@
 //! # let run_clip_handle: Handle<AnimationClip> = Handle::default();
 //!     let starting_state = "idle";
 //!     let my_states_map = HashMap::from([
-//!         ("idle".to_string(), AnimationState{
+//!         ("idle", AnimationState{
 //!             name: "idle".to_string(),
 //!             clip: idle_clip_handle,
 //!             interruptible: true,
 //!         }),
-//!         ("run".to_string(), AnimationState{
+//!         ("run", AnimationState{
 //!             name: "run".to_string(),
 //!             clip: run_clip_handle,
 //!             interruptible: true,
@@ -42,7 +42,7 @@
 //!         trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
 //!     }];
 //!     let state_machine_vars = HashMap::from([
-//!         ("run".to_string(), StateMachineVariableType::Bool(false)),    
+//!         ("run", StateMachineVariableType::Bool(false)),    
 //!     ]);
 //!      
 //!     commands.spawn_bundle(SpatialBundle::default())
@@ -66,7 +66,7 @@
 //! #   "idle",
 //! #   HashMap::default(),
 //! #   vec![],
-//! #   HashMap::from([("run".to_string(), StateMachineVariableType::Bool(false))]),
+//! #   HashMap::from([("run", StateMachineVariableType::Bool(false))]),
 //! # );
 //! state_machine.update_variable("run", StateMachineVariableType::Bool(true));
 //! ```
@@ -236,12 +236,12 @@ impl StateMachineVariableType {
 /// # let run_clip_handle: Handle<AnimationClip> = Handle::default();
 ///     let starting_state = "idle";
 ///     let my_states_map = HashMap::from([
-///         ("idle".to_string(), AnimationState{
+///         ("idle", AnimationState{
 ///             name: "idle".to_string(),
 ///             clip: idle_clip_handle,
 ///             interruptible: true,
 ///         }),
-///         ("run".to_string(), AnimationState{
+///         ("run", AnimationState{
 ///             name: "run".to_string(),
 ///             clip: run_clip_handle,
 ///             interruptible: true,
@@ -254,7 +254,7 @@ impl StateMachineVariableType {
 ///         trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
 ///     }];
 ///     let state_machine_vars = HashMap::from([
-///         ("run".to_string(), StateMachineVariableType::Bool(false)),
+///         ("run", StateMachineVariableType::Bool(false)),
 ///     ]);
 ///      
 ///     commands.spawn_bundle(SpatialBundle::default())
@@ -280,15 +280,21 @@ impl AnimationStateMachine {
     /// Creates a new [`AnimationStateMachine`]
     pub fn new<T: ToString>(
         current_state: T,
-        states: HashMap<String, AnimationState>,
+        states: HashMap<T, AnimationState>,
         transitions: Vec<StateMachineTransition>,
-        variables: StateMachineVariables,
+        variables: HashMap<T, StateMachineVariableType>,
     ) -> Self {
         Self {
             current_state: current_state.to_string(),
-            states,
+            states: states
+                .iter()
+                .map(|(name, state)| (name.to_string(), state.to_owned()))
+                .collect(),
             transitions,
-            variables,
+            variables: variables
+                .iter()
+                .map(|(name, var)| (name.to_string(), var.to_owned()))
+                .collect(),
         }
     }
 
@@ -395,7 +401,7 @@ impl Display for AnimationStateRef {
 ///
 /// Example
 /// ```
-/// # use bevy_simple_state_machine::{StateMachineTransition, StateMachineTrigger, AnimationStateRef};///
+/// # use bevy_simple_state_machine::{StateMachineTransition, StateMachineTrigger, AnimationStateRef};
 /// let transition = StateMachineTransition {
 ///     start_state: AnimationStateRef::from_string("idle"),
 ///     end_state: AnimationStateRef::from_string("run"),
