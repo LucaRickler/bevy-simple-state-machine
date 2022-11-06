@@ -1,6 +1,6 @@
 [package]
 name = "bevy-simple-state-machine"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "A rudimentary animation state machine system for Bevy"
 repository = "https://github.com/LucaRickler/bevy-simple-state-machine"
