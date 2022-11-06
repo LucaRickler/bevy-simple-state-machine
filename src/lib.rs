@@ -107,6 +107,9 @@ impl Plugin for SimpleStateMachinePlugin {
         app.add_event::<TransitionEndedEvent>()
             .register_type::<AnimationStateMachine>()
             .register_type::<AnimationStateRef>()
+            .register_type::<AnimationState>()
+            .register_type::<StateMachineVariableType>()
+            .register_type::<StateMachineTransition>()
             .add_system(Self::check_transitions.label(StateMachineSystemLabel::StateMachineLabel))
             .add_system(
                 Self::init_state_machines.label(StateMachineSystemLabel::StateMachineLabel),
@@ -483,7 +486,7 @@ impl StateMachineTrigger {
 ///
 /// ## Note
 /// Transitions right now conclude on the same frame they are triggered  
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TransitionEndedEvent {
     /// The entity on which the transition has been executed
     pub entity: Entity,
