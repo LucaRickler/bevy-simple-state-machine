@@ -144,6 +144,7 @@ impl SimpleStateMachinePlugin {
                             {
                                 debug!("triggering {}", transition);
                                 state_machine.current_state = next_state.name;
+                                // TODO: Evaluate if this should be player.start([...])
                                 player.play(next_state.clip);
                                 event_writer.send(TransitionEndedEvent {
                                     entity,
