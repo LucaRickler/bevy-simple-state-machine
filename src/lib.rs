@@ -79,8 +79,6 @@
 //!  - Internal state machine variables
 //!
 //! Currently, transitions end on the same frame they are triggered.
-//!
-//! Animation blending and transition duration are not implemented.
 
 use std::{
     fmt::{Debug, Display},
@@ -110,10 +108,8 @@ impl Plugin for SimpleStateMachinePlugin {
             .register_type::<AnimationState>()
             .register_type::<StateMachineVariableType>()
             .register_type::<StateMachineTransition>()
-            .add_system(Self::check_transitions.label(StateMachineSystemLabel::StateMachineLabel))
-            .add_system(
-                Self::init_state_machines.label(StateMachineSystemLabel::StateMachineLabel),
-            );
+            .add_system(Self::check_transitions.in_set(StateMachineSet::StateMachineSet))
+            .add_system(Self::init_state_machines.in_set(StateMachineSet::StateMachineSet));
     }
 }
 
@@ -176,10 +172,10 @@ impl SimpleStateMachinePlugin {
 /// State machine system label
 ///
 /// You can use this if you need a specific order for your systems
-#[derive(SystemLabel, Clone)]
-pub enum StateMachineSystemLabel {
+#[derive(SystemSet, Clone, Hash, Debug, PartialEq, Eq)]
+pub enum StateMachineSet {
     #[allow(missing_docs)]
-    StateMachineLabel,
+    StateMachineSet,
 }
 
 /// Internal state machine variables map type
