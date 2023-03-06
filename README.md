@@ -68,14 +68,12 @@ state_machine.update_variable("run", StateMachineVariableType::Bool(true));
 
 Currently, transitions end on the same frame they are triggered.
 
-
-Animation blending and transition duration are not implemented.
-
 ---
 ## Bevy Compatibility:
 
 | Bevy Version | Plugin Version       |
 |--------------|----------------------|
-| `0.9`        | `main`               |
+| `0.10`       | `main`               |
+| `0.10`       | `0.3.0`               |
 | `0.9`        | `0.2.0`              |
 | `0.8`        | `0.1.0`              |
