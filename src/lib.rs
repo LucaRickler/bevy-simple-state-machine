@@ -83,6 +83,7 @@
 use std::{
     fmt::{Debug, Display},
     sync::Arc,
+    time::Duration,
 };
 
 use bevy::{prelude::*, reflect::FromReflect, utils::HashMap};
@@ -140,8 +141,12 @@ impl SimpleStateMachinePlugin {
                             {
                                 debug!("triggering {}", transition);
                                 state_machine.current_state = next_state.name;
-                                // TODO: Evaluate if this should be player.start([...])
-                                player.play(next_state.clip);
+                                if let Some(transition_duration) = transition.transition_duration {
+                                    player
+                                        .play_with_transition(next_state.clip, transition_duration);
+                                } else {
+                                    player.play(next_state.clip);
+                                }
                                 event_writer.send(TransitionEndedEvent {
                                     entity,
                                     origin: current_state.state_ref(),
@@ -420,6 +425,8 @@ pub struct StateMachineTransition {
     /// Transition trigger condition
     #[reflect(ignore)]
     pub trigger: StateMachineTrigger,
+    /// Tranisition Duration
+    pub transition_duration: Option<Duration>,
 }
 
 impl Display for StateMachineTransition {
