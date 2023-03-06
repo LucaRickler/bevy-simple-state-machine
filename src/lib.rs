@@ -36,16 +36,17 @@
 //!         }),
 //!     ]);
 //!     let my_states_transitions_vec = vec![
-//!         StateMachineTransition {
-//!         start_state: AnimationStateRef::from_string("idle"),
-//!         end_state: AnimationStateRef::from_string("run"),
-//!         trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
-//!     }];
+//!         StateMachineTransition::immediate(
+//!             AnimationStateRef::from_string("idle"),
+//!             AnimationStateRef::from_string("run"),
+//!             StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+//!         ),
+//!    ];
 //!     let state_machine_vars = HashMap::from([
 //!         ("run", StateMachineVariableType::Bool(false)),    
 //!     ]);
 //!      
-//!     commands.spawn_bundle(SpatialBundle::default())
+//!     commands.spawn(SpatialBundle::default())
 //!         .insert(AnimationPlayer::default())
 //!         .insert(AnimationStateMachine::new(
 //!             starting_state,
@@ -253,16 +254,17 @@ impl StateMachineVariableType {
 ///         }),
 ///     ]);
 ///     let my_states_transitions_vec = vec![
-///         StateMachineTransition {
-///         start_state: AnimationStateRef::from_string("idle"),
-///         end_state: AnimationStateRef::from_string("run"),
-///         trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
-///     }];
+///         StateMachineTransition::immediate(
+///             AnimationStateRef::from_string("idle"),
+///             AnimationStateRef::from_string("run"),
+///             StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+///         ),
+///     ];
 ///     let state_machine_vars = HashMap::from([
 ///         ("run", StateMachineVariableType::Bool(false)),
 ///     ]);
 ///      
-///     commands.spawn_bundle(SpatialBundle::default())
+///     commands.spawn(SpatialBundle::default())
 ///         .insert(AnimationPlayer::default())
 ///         .insert(AnimationStateMachine::new(
 ///             starting_state,
@@ -407,11 +409,20 @@ impl Display for AnimationStateRef {
 /// Example
 /// ```
 /// # use bevy_simple_state_machine::{StateMachineTransition, StateMachineTrigger, AnimationStateRef};
-/// let transition = StateMachineTransition {
-///     start_state: AnimationStateRef::from_string("idle"),
-///     end_state: AnimationStateRef::from_string("run"),
-///     trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
-/// };
+/// # use std::time::Duration;
+/// let immediate_transition = StateMachineTransition::immediate(
+///     AnimationStateRef::from_string("idle"),
+///     AnimationStateRef::from_string("run"),
+///     StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+/// );
+/// 
+/// let blending_transition = StateMachineTransition::blend(
+///     AnimationStateRef::from_string("idle"),
+///     AnimationStateRef::from_string("run"),
+///     StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+///     Duration::from_secs(10),
+/// );
+
 /// ```
 #[derive(Clone, Reflect, FromReflect)]
 pub struct StateMachineTransition {
@@ -427,6 +438,38 @@ pub struct StateMachineTransition {
     pub trigger: StateMachineTrigger,
     /// Tranisition Duration
     pub transition_duration: Option<Duration>,
+}
+
+impl StateMachineTransition {
+    /// Creates a new [`StateMachineTransition`] without a transition duration
+    pub fn immediate(
+        start_state: AnimationStateRef,
+        end_state: AnimationStateRef,
+        trigger: StateMachineTrigger,
+    ) -> Self {
+        Self {
+            start_state,
+            end_state,
+            trigger,
+            transition_duration: None,
+        }
+        
+    }
+
+    /// Creates a new [`StateMachineTransition`] with the given transition duration
+    pub fn blend(
+        start_state: AnimationStateRef,
+        end_state: AnimationStateRef,
+        trigger: StateMachineTrigger,
+        transition_duration: Duration
+    ) -> Self {
+        Self {
+            start_state,
+            end_state,
+            trigger,
+            transition_duration: Some(transition_duration),
+        }
+    }
 }
 
 impl Display for StateMachineTransition {

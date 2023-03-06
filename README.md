@@ -33,11 +33,12 @@ fn setup(mut commands: Commands) {
         }),
     ]);
     let my_states_transitions_vec = vec![
-        StateMachineTransition {
-        start_state: AnimationStateRef::from_string("idle"),
-        end_state: AnimationStateRef::from_string("run"),
-        trigger: StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
-    }];
+        StateMachineTransition::immediate(
+            AnimationStateRef::from_string("idle"),
+            AnimationStateRef::from_string("run"),
+            StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
+        ),
+    ];
     let state_machine_vars = HashMap::from([
         ("run".to_string(), StateMachineVariableType::Bool(false)),    
     ]);
