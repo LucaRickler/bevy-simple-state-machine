@@ -74,7 +74,8 @@ Currently, transitions end on the same frame they are triggered.
 
 | Bevy Version | Plugin Version       |
 |--------------|----------------------|
-| `0.10`       | `main`               |
-| `0.10`       | `0.3.0`               |
+| `0.11`       | `main`               |
+| `0.11`       | `0.4.0`              |
+| `0.10`       | `0.3.0`              |
 | `0.9`        | `0.2.0`              |
 | `0.8`        | `0.1.0`              |

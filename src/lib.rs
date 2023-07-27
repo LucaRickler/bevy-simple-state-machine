@@ -87,7 +87,7 @@ use std::{
     time::Duration,
 };
 
-use bevy::{prelude::*, reflect::FromReflect, utils::HashMap};
+use bevy::{ecs::schedule::ScheduleLabel, prelude::*, utils::HashMap};
 
 /// Plugin that handles all state machine executions
 ///
@@ -99,8 +99,10 @@ use bevy::{prelude::*, reflect::FromReflect, utils::HashMap};
 ///     .add_plugins(DefaultPlugins)
 ///     .add_plugin(SimpleStateMachinePlugin::new());
 /// ```
-#[derive(Default)]
-pub struct SimpleStateMachinePlugin {}
+
+pub struct SimpleStateMachinePlugin {
+    schedule: Box<dyn ScheduleLabel>,
+}
 
 impl Plugin for SimpleStateMachinePlugin {
     fn build(&self, app: &mut App) {
@@ -110,15 +112,32 @@ impl Plugin for SimpleStateMachinePlugin {
             .register_type::<AnimationState>()
             .register_type::<StateMachineVariableType>()
             .register_type::<StateMachineTransition>()
-            .add_system(Self::check_transitions.in_set(StateMachineSet::StateMachineSet))
-            .add_system(Self::init_state_machines.in_set(StateMachineSet::StateMachineSet));
+            .add_systems(
+                self.schedule.to_owned(),
+                Self::check_transitions.in_set(StateMachineSet::StateMachineSet),
+            )
+            .add_systems(
+                self.schedule.to_owned(),
+                Self::init_state_machines.in_set(StateMachineSet::StateMachineSet),
+            );
     }
 }
 
 impl SimpleStateMachinePlugin {
-    /// Creates a new instance of [`SimpleStateMachinePlugin`]    
+    /// Creates a new instance of [`SimpleStateMachinePlugin`]
+    ///
+    /// Its systems are scheduled in [`Update`]   
     pub fn new() -> Self {
-        Self::default()
+        Self::new_in_schedule(Update)
+    }
+
+    /// Creates a new instance of [`SimpleStateMachinePlugin`]
+    ///
+    /// Its systems will be registered in the specified schedule
+    pub fn new_in_schedule(schedule: impl ScheduleLabel) -> Self {
+        Self {
+            schedule: Box::new(schedule),
+        }
     }
 
     fn check_transitions(
@@ -188,7 +207,7 @@ pub enum StateMachineSet {
 pub type StateMachineVariables = HashMap<String, StateMachineVariableType>;
 
 /// State machine variable type
-#[derive(Clone, Reflect, FromReflect, PartialEq)]
+#[derive(Clone, Reflect, PartialEq)]
 pub enum StateMachineVariableType {
     /// Stores a bool
     Bool(bool),
@@ -274,7 +293,7 @@ impl StateMachineVariableType {
 ///         ));
 /// }
 /// ```
-#[derive(Component, Default, Reflect, FromReflect)]
+#[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct AnimationStateMachine {
     current_state: String,
@@ -350,7 +369,7 @@ impl AnimationStateMachine {
 }
 
 /// [`AnimationStateMachine`] state structure
-#[derive(Default, Debug, Clone, Reflect, FromReflect)]
+#[derive(Default, Debug, Clone, Reflect)]
 pub struct AnimationState {
     /// Animation clip handle
     pub clip: Handle<AnimationClip>,
@@ -367,7 +386,7 @@ impl AnimationState {
 }
 
 /// Reference to an [`AnimationState`] name
-#[derive(Debug, Clone, PartialEq, Eq, Reflect, FromReflect)]
+#[derive(Debug, Clone, PartialEq, Eq, Reflect)]
 pub enum AnimationStateRef {
     /// Wildcard reference
     AnyState,
@@ -415,7 +434,7 @@ impl Display for AnimationStateRef {
 ///     AnimationStateRef::from_string("run"),
 ///     StateMachineTrigger::from(|vars| vars["run"].is_bool(true)),
 /// );
-/// 
+///
 /// let blending_transition = StateMachineTransition::blend(
 ///     AnimationStateRef::from_string("idle"),
 ///     AnimationStateRef::from_string("run"),
@@ -424,7 +443,7 @@ impl Display for AnimationStateRef {
 /// );
 
 /// ```
-#[derive(Clone, Reflect, FromReflect)]
+#[derive(Clone, Reflect)]
 pub struct StateMachineTransition {
     /// Reference to the starting state
     pub start_state: AnimationStateRef,
@@ -453,7 +472,6 @@ impl StateMachineTransition {
             trigger,
             transition_duration: None,
         }
-        
     }
 
     /// Creates a new [`StateMachineTransition`] with the given transition duration
@@ -461,7 +479,7 @@ impl StateMachineTransition {
         start_state: AnimationStateRef,
         end_state: AnimationStateRef,
         trigger: StateMachineTrigger,
-        transition_duration: Duration
+        transition_duration: Duration,
     ) -> Self {
         Self {
             start_state,
@@ -533,7 +551,7 @@ impl StateMachineTrigger {
 ///
 /// ## Note
 /// Transitions right now conclude on the same frame they are triggered  
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Event)]
 pub struct TransitionEndedEvent {
     /// The entity on which the transition has been executed
     pub entity: Entity,
