@@ -11,7 +11,7 @@
 //! # use bevy_simple_state_machine::SimpleStateMachinePlugin;
 //! App::new()
 //!     .add_plugins(DefaultPlugins)
-//!     .add_plugin(SimpleStateMachinePlugin::new());
+//!     .add_plugins(SimpleStateMachinePlugin::new());
 //! ```
 //!
 //! And then insert an `AnimationStateMachine` component on your entities
@@ -87,7 +87,11 @@ use std::{
     time::Duration,
 };
 
-use bevy::{ecs::schedule::ScheduleLabel, prelude::*, utils::HashMap};
+use bevy::{
+    ecs::schedule::{InternedScheduleLabel, ScheduleLabel},
+    prelude::*,
+    utils::HashMap,
+};
 
 /// Plugin that handles all state machine executions
 ///
@@ -97,11 +101,11 @@ use bevy::{ecs::schedule::ScheduleLabel, prelude::*, utils::HashMap};
 /// # use bevy_simple_state_machine::SimpleStateMachinePlugin;
 /// App::new()
 ///     .add_plugins(DefaultPlugins)
-///     .add_plugin(SimpleStateMachinePlugin::new());
+///     .add_plugins(SimpleStateMachinePlugin::new());
 /// ```
 
 pub struct SimpleStateMachinePlugin {
-    schedule: Box<dyn ScheduleLabel>,
+    schedule: InternedScheduleLabel,
 }
 
 impl Plugin for SimpleStateMachinePlugin {
@@ -114,12 +118,17 @@ impl Plugin for SimpleStateMachinePlugin {
             .register_type::<StateMachineTransition>()
             .add_systems(
                 self.schedule.to_owned(),
-                Self::check_transitions.in_set(StateMachineSet::StateMachineSet),
-            )
-            .add_systems(
-                self.schedule.to_owned(),
-                Self::init_state_machines.in_set(StateMachineSet::StateMachineSet),
+                (
+                    Self::init_state_machines.in_set(StateMachineSet::StateMachineSet),
+                    Self::check_transitions.in_set(StateMachineSet::StateMachineSet),
+                ),
             );
+    }
+}
+
+impl Default for SimpleStateMachinePlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -136,24 +145,17 @@ impl SimpleStateMachinePlugin {
     /// Its systems will be registered in the specified schedule
     pub fn new_in_schedule(schedule: impl ScheduleLabel) -> Self {
         Self {
-            schedule: Box::new(schedule),
+            schedule: schedule.intern(),
         }
     }
 
     fn check_transitions(
         mut state_machines_query: Query<(Entity, &mut AnimationStateMachine, &mut AnimationPlayer)>,
-        animations: Res<Assets<AnimationClip>>,
         mut event_writer: EventWriter<TransitionEndedEvent>,
     ) {
         for (entity, mut state_machine, mut player) in &mut state_machines_query {
             if let Some(current_state) = state_machine.current_state() {
-                if current_state.interruptible
-                    || AnimationStateMachine::animation_finished(
-                        player.as_mut(),
-                        &current_state,
-                        animations.as_ref(),
-                    )
-                {
+                if current_state.interruptible || player.is_finished() {
                     for transition in state_machine.transitions_from_current_state() {
                         if transition.trigger.evaluate(&state_machine.variables) {
                             if let Some(next_state) =
@@ -199,7 +201,9 @@ impl SimpleStateMachinePlugin {
 /// You can use this if you need a specific order for your systems
 #[derive(SystemSet, Clone, Hash, Debug, PartialEq, Eq)]
 pub enum StateMachineSet {
-    #[allow(missing_docs)]
+    /// State machine system label
+    ///
+    /// You can use this if you need a specific order for your systems
     StateMachineSet,
 }
 
@@ -349,17 +353,6 @@ impl AnimationStateMachine {
 
     fn transitions_from_current_state(&self) -> Vec<StateMachineTransition> {
         self.transitions_from_state(&self.current_state)
-    }
-
-    fn animation_finished(
-        player: &AnimationPlayer,
-        state: &AnimationState,
-        animations: &Assets<AnimationClip>,
-    ) -> bool {
-        match animations.get(&state.clip) {
-            Some(clip) => player.elapsed() >= clip.duration(),
-            None => true,
-        }
     }
 
     /// Updates the value of the given variable

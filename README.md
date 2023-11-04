@@ -12,7 +12,7 @@ To use this, you have to add the `SimpleStateMachinePlugin` to you app:
 ```rust
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(SimpleStateMachinePlugin::new());
+    .add_plugins(SimpleStateMachinePlugin::new());
 ```
 
 And then insert an `AnimationStateMachine` component on your entities:
@@ -74,7 +74,8 @@ Currently, transitions end on the same frame they are triggered.
 
 | Bevy Version | Plugin Version       |
 |--------------|----------------------|
-| `0.11`       | `main`               |
+| `0.12`       | `main`               |
+| `0.12`       | `0.5.0`              |
 | `0.11`       | `0.4.0`              |
 | `0.10`       | `0.3.0`              |
 | `0.9`        | `0.2.0`              |
