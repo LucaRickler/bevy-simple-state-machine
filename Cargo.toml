@@ -1,6 +1,6 @@
 [package]
 name = "bevy-simple-state-machine"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 description = "A rudimentary animation state machine system for Bevy"
 repository = "https://github.com/LucaRickler/bevy-simple-state-machine"
@@ -13,4 +13,4 @@ categories = ["game-development"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.12.0"
+bevy = "0.13.0"

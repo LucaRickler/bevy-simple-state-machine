@@ -173,7 +173,7 @@ impl SimpleStateMachinePlugin {
                                     entity,
                                     origin: current_state.state_ref(),
                                     end: transition.end_state,
-                                })
+                                });
                             }
                         }
                     }
